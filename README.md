@@ -35,5 +35,5 @@ Set a different `MEM0_USER_ID` in `.env` to use an independent memory namespace.
 - `/memories` lists up to 100 memories for the current `MEM0_USER_ID`.
 - `/search <query>` searches that user's memories.
 - `/forget <memory_id>` deletes one of that user's memories. Use `/memories` or `/search` to find its ID.
-- `/feedback good` or `/feedback bad` rates the most recent answer. Feedback is stored separately in `data/feedback.sqlite3` and is not added to Mem0.
+- `/feedback good` or `/feedback bad` rates the most recent answer. For a bad answer, the agent can save an explanation and optional correction in `data/feedback.sqlite3`. It asks you to confirm those details before using them as lessons in future prompts; this confirmation is user-provided, not independent fact-checking. Ratings alone are never retrieved as verified lessons.
 - `/help` lists available commands, and `/quit` exits.

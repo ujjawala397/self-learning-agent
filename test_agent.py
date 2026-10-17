@@ -71,22 +71,59 @@ class CommandTests(unittest.TestCase):
     def test_feedback_attaches_to_previous_exchange_and_is_persisted_separately(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory) / "feedback.sqlite3"
-            agent.record_feedback("question", "answer", "good", database)
+            agent.record_feedback(
+                "question",
+                "answer",
+                "bad",
+                database,
+                explanation="The answer was incomplete.",
+                correction="Include the missing step.",
+                verified=True,
+            )
 
             with sqlite3.connect(database) as connection:
                 row = connection.execute(
-                    "SELECT user_id, rating, question, answer FROM feedback"
+                    """
+                    SELECT user_id, rating, question, answer, explanation,
+                           correction, verified
+                    FROM feedback
+                    """
                 ).fetchone()
 
-            self.assertEqual(row, (agent.USER_ID, "good", "question", "answer"))
-
-        memory = FakeMemory()
-        with patch("agent.record_feedback") as save_feedback:
-            agent.handle_command(
-                memory, "/feedback", "bad", ("question 2", "answer 2")
+            self.assertEqual(
+                row,
+                (
+                    agent.USER_ID,
+                    "bad",
+                    "question",
+                    "answer",
+                    "The answer was incomplete.",
+                    "Include the missing step.",
+                    1,
+                ),
             )
 
-        save_feedback.assert_called_once_with("question 2", "answer 2", "bad")
+        memory = FakeMemory()
+        output = io.StringIO()
+        with (
+            patch(
+                "builtins.input",
+                side_effect=["wrong source", "Use the official docs", "yes"],
+            ),
+            patch("agent.record_feedback", return_value=12) as save_feedback,
+            contextlib.redirect_stdout(output),
+        ):
+            agent.handle_command(memory, "/feedback", "bad", ("question 2", "answer 2"))
+
+        save_feedback.assert_called_once_with(
+            "question 2",
+            "answer 2",
+            "bad",
+            explanation="wrong source",
+            correction="Use the official docs",
+            verified=True,
+        )
+        self.assertIn("Feedback saved (ID 12)", output.getvalue())
 
     def test_feedback_without_answer_is_not_saved(self) -> None:
         output = io.StringIO()
@@ -96,6 +133,77 @@ class CommandTests(unittest.TestCase):
 
         self.assertIn("There is no previous answer", output.getvalue())
         save_feedback.assert_not_called()
+
+    def test_feedback_lessons_use_only_relevant_user_confirmed_details(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "feedback.sqlite3"
+            agent.record_feedback(
+                "How do I calculate portfolio return?",
+                "Wrong calculation.",
+                "bad",
+                database,
+                explanation="The answer used a simple rather than annualized return.",
+                correction="Use the annualized return formula.",
+                verified=True,
+            )
+            agent.record_feedback(
+                "How do I calculate portfolio return?",
+                "Correct calculation.",
+                "good",
+                database,
+            )
+            agent.record_feedback(
+                "How do I bake sourdough bread?",
+                "Wrong recipe.",
+                "bad",
+                database,
+                correction="Use a longer fermentation.",
+                verified=True,
+            )
+
+            context = agent.get_feedback_context(
+                "Explain annualized portfolio return.", database
+            )
+
+        self.assertIn("annualized return formula", context)
+        self.assertIn("Prior question: How do I calculate portfolio return?", context)
+        self.assertNotIn("Correct calculation", context)
+        self.assertNotIn("longer fermentation", context)
+
+    def test_legacy_feedback_rows_migrate_as_unverified(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "legacy.sqlite3"
+            with sqlite3.connect(database) as connection:
+                connection.execute(
+                    """
+                    CREATE TABLE feedback (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id TEXT NOT NULL,
+                        rating TEXT NOT NULL,
+                        question TEXT NOT NULL,
+                        answer TEXT NOT NULL,
+                        created_at TEXT NOT NULL
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO feedback
+                        (user_id, rating, question, answer, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (agent.USER_ID, "good", "portfolio return", "answer", "now"),
+                )
+
+            context = agent.get_feedback_context("portfolio return", database)
+
+            with sqlite3.connect(database) as connection:
+                row = connection.execute(
+                    "SELECT explanation, correction, verified FROM feedback"
+                ).fetchone()
+
+        self.assertEqual(row, (None, None, 0))
+        self.assertEqual(context, "")
 
 
 class MemoryPolicyTests(unittest.TestCase):
@@ -108,7 +216,9 @@ class MemoryPolicyTests(unittest.TestCase):
             SimpleNamespace(message=SimpleNamespace(content=answer))
         ]
 
-        with patch("agent.get_memory_context", return_value=""):
+        with patch("agent.get_memory_context", return_value=""), patch(
+            "agent.get_feedback_context", return_value="- Use the annualized formula."
+        ):
             result = agent.respond(client, memory, question)
 
         self.assertEqual(result, answer)
@@ -128,6 +238,11 @@ class MemoryPolicyTests(unittest.TestCase):
         self.assertIn("source or provenance", agent.MEMORY_POLICY)
         self.assertIn("exact reporting period", agent.MEMORY_POLICY)
         self.assertIn("do not store it", agent.MEMORY_POLICY)
+        system_prompt = client.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ]
+        self.assertIn("Use the annualized formula", system_prompt)
+        self.assertIn("positive rating alone is not a verified fact", system_prompt)
 
 
 if __name__ == "__main__":
