@@ -1,6 +1,8 @@
 # Self-Learning AI Agent
 
-A small terminal assistant that uses OpenAI for responses and mem0 for persistent, user-specific memory. It retrieves relevant memories before each answer and gives each conversation back to mem0 to extract facts that may help in future conversations. This improves personalization; it does not fine-tune or update the language model's weights.
+A small terminal assistant that uses OpenAI for responses and mem0 for persistent, user-specific memory. It retrieves relevant memories before each answer and offers only the user's message to mem0 under an explicit policy for selecting durable memories. Assistant-generated answers and temporary conversation details are not sent as durable-memory input. This improves personalization; it does not fine-tune or update the language model's weights.
+
+The memory policy prioritizes stable preferences, ongoing research or learning goals, recurring instructions, and user-stated or confirmed facts that can help in future conversations. Questions, hypotheticals, one-off requests, and unsupported inferences are not durable facts. Finance-related memories are retained only when the user's message states both the source or provenance and exact reporting period; both are kept with the fact.
 
 ## Setup
 

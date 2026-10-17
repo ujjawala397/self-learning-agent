@@ -4,7 +4,8 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import agent
 
@@ -13,6 +14,9 @@ class FakeMemory:
     def __init__(self, owner_id: str = agent.USER_ID) -> None:
         self.calls: list[tuple[object, ...]] = []
         self.owner_id = owner_id
+
+    def add(self, **kwargs: object) -> None:
+        self.calls.append(("add", kwargs))
 
     def get_all(self, **kwargs: object) -> dict[str, object]:
         self.calls.append(("get_all", kwargs))
@@ -92,6 +96,38 @@ class CommandTests(unittest.TestCase):
 
         self.assertIn("There is no previous answer", output.getvalue())
         save_feedback.assert_not_called()
+
+
+class MemoryPolicyTests(unittest.TestCase):
+    def test_respond_sends_only_user_input_with_durable_memory_policy(self) -> None:
+        question = "I prefer concise answers and am learning Python."
+        answer = "I'll keep answers concise and help with Python."
+        memory = FakeMemory()
+        client = Mock()
+        client.chat.completions.create.return_value.choices = [
+            SimpleNamespace(message=SimpleNamespace(content=answer))
+        ]
+
+        with patch("agent.get_memory_context", return_value=""):
+            result = agent.respond(client, memory, question)
+
+        self.assertEqual(result, answer)
+        self.assertEqual(
+            memory.calls,
+            [
+                (
+                    "add",
+                    {
+                        "messages": [{"role": "user", "content": question}],
+                        "user_id": agent.USER_ID,
+                        "prompt": agent.MEMORY_POLICY,
+                    },
+                )
+            ],
+        )
+        self.assertIn("source or provenance", agent.MEMORY_POLICY)
+        self.assertIn("exact reporting period", agent.MEMORY_POLICY)
+        self.assertIn("do not store it", agent.MEMORY_POLICY)
 
 
 if __name__ == "__main__":

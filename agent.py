@@ -15,6 +15,16 @@ load_dotenv(ROOT / ".env")
 
 USER_ID = os.getenv("MEM0_USER_ID", "default")
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MEMORY_POLICY = """Extract durable, user-specific memories from the supplied user message only.
+Prioritize stable user preferences, ongoing research or learning goals, recurring
+instructions, and facts the user explicitly states or confirms that are useful
+in future conversations. A question, hypothetical, one-off request, temporary
+detail, guess, or unsupported inference is not a confirmed fact; do not store it.
+If no durable information qualifies, extract no memories.
+
+For every finance-related fact that qualifies, preserve its source or provenance
+and exact reporting period in the same memory. Both must be stated by the user;
+never infer either. Do not store a finance-related fact if either is missing."""
 
 
 def create_memory() -> Memory:
@@ -65,11 +75,9 @@ def respond(client: OpenAI, memory: Memory, question: str) -> str:
     answer = completion.choices[0].message.content or "I couldn't generate a response."
 
     memory.add(
-        messages=[
-            {"role": "user", "content": question},
-            {"role": "assistant", "content": answer},
-        ],
+        messages=[{"role": "user", "content": question}],
         user_id=USER_ID,
+        prompt=MEMORY_POLICY,
     )
     return answer
 
