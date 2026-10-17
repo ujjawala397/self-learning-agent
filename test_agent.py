@@ -212,9 +212,13 @@ class MemoryPolicyTests(unittest.TestCase):
         answer = "I'll keep answers concise and help with Python."
         memory = FakeMemory()
         client = Mock()
-        client.chat.completions.create.return_value.choices = [
-            SimpleNamespace(message=SimpleNamespace(content=answer))
-        ]
+        client.chat.completions.create.return_value = iter(
+            [
+                SimpleNamespace(
+                    choices=[SimpleNamespace(delta=SimpleNamespace(content=answer))]
+                )
+            ]
+        )
 
         with patch("agent.get_memory_context", return_value=""), patch(
             "agent.get_feedback_context", return_value="- Use the annualized formula."

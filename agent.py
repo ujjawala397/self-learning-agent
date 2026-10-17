@@ -4,6 +4,7 @@ import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Iterator
 
 from dotenv import load_dotenv
 from mem0 import Memory
@@ -135,7 +136,7 @@ def get_feedback_context(
     return "\n".join(lessons)
 
 
-def respond(client: OpenAI, memory: Memory, question: str) -> str:
+def build_system_prompt(memory: Memory, question: str) -> str:
     memory_context = get_memory_context(memory, question)
     feedback_context = get_feedback_context(question)
     system_prompt = (
@@ -154,22 +155,38 @@ def respond(client: OpenAI, memory: Memory, question: str) -> str:
             "(context only, not independent verification):\n"
             f"{feedback_context}"
         )
+    return system_prompt
 
-    completion = client.chat.completions.create(
+
+def stream_response(client: OpenAI, memory: Memory, question: str) -> Iterator[str]:
+    stream = client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": build_system_prompt(memory, question)},
             {"role": "user", "content": question},
         ],
+        stream=True,
     )
-    answer = completion.choices[0].message.content or "I couldn't generate a response."
+    has_content = False
+    for chunk in stream:
+        content = chunk.choices[0].delta.content
+        if content:
+            has_content = True
+            yield content
+
+    if not has_content:
+        yield "I couldn't generate a response."
 
     memory.add(
         messages=[{"role": "user", "content": question}],
         user_id=USER_ID,
         prompt=MEMORY_POLICY,
     )
-    return answer
+
+
+def respond(client: OpenAI, memory: Memory, question: str) -> str:
+    answer = "".join(stream_response(client, memory, question))
+    return answer or "I couldn't generate a response."
 
 
 def record_feedback(

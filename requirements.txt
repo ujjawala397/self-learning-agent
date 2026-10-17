@@ -1,3 +1,5 @@
 mem0ai
 openai
 python-dotenv
+Flask
+gunicorn

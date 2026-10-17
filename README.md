@@ -16,11 +16,29 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Add your OpenAI API key to `.env`, then start the agent:
+Add your OpenAI API key to `.env`, then start the terminal agent:
 
 ```bash
 python agent.py
 ```
+
+To start the chat UI locally, run this from the project directory:
+
+```bash
+python web_app.py
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The UI streams answer tokens as they arrive, and lets you rate an answer or submit an explanation and confirmed correction.
+
+### Running on a server
+
+Copy the project to a private Linux server, install its requirements, and put `.env` on that server (do not commit or upload your API key to source control). Run the production WSGI server from the project directory:
+
+```bash
+gunicorn --workers 1 --bind 127.0.0.1:8000 web_app:app
+```
+
+Put an HTTPS reverse proxy with authentication in front of `127.0.0.1:8000`. Do not expose the app directly to the public internet: this initial UI has no user login and uses the single `MEM0_USER_ID` configured for the process, so everyone reaching it would share that user's memories and feedback. Keep `data/` persistent and backed up; it contains the local Qdrant data and feedback database. For a private single-user server, access it through the authenticated proxy or a VPN.
 
 Memories are isolated by `MEM0_USER_ID` and stored in `data/qdrant/`. Keep that directory to retain memory between runs. The LLM and embedding requests are sent to OpenAI; mem0's memory extraction uses the configured OpenAI model.
 
