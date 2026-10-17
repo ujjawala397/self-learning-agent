@@ -27,3 +27,11 @@ Memories are isolated by `MEM0_USER_ID` and stored in `data/qdrant/`. Keep that 
 Tell the agent something it should remember, such as `I prefer concise answers and I'm learning Python.` Then ask a related question. On a later run with the same `MEM0_USER_ID`, it can retrieve that preference and personalize its answer. Type `/quit` to exit.
 
 Set a different `MEM0_USER_ID` in `.env` to use an independent memory namespace. Don't share an ID between people.
+
+## Commands
+
+- `/memories` lists up to 100 memories for the current `MEM0_USER_ID`.
+- `/search <query>` searches that user's memories.
+- `/forget <memory_id>` deletes one of that user's memories. Use `/memories` or `/search` to find its ID.
+- `/feedback good` or `/feedback bad` rates the most recent answer. Feedback is stored separately in `data/feedback.sqlite3` and is not added to Mem0.
+- `/help` lists available commands, and `/quit` exits.
