@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from mem0 import Memory
 from openai import OpenAI
 
+from research import stream_research
 from retrieve import retrieve_passages
 
 
@@ -208,6 +209,34 @@ def stream_response(client: OpenAI, memory: Memory, question: str) -> Iterator[s
     if not has_content:
         yield "I couldn't generate a response."
 
+    memory.add(
+        messages=[{"role": "user", "content": question}],
+        user_id=USER_ID,
+        prompt=MEMORY_POLICY,
+    )
+
+
+def stream_research_response(
+    client: OpenAI,
+    memory: Memory,
+    question: str,
+) -> Iterator[dict[str, object]]:
+    memory_context = get_memory_context(memory, question)
+    feedback_context = get_feedback_context(question)
+    additional_context = ""
+    if memory_context:
+        additional_context += f"Relevant user memories:\n{memory_context}\n\n"
+    if feedback_context:
+        additional_context += (
+            "Relevant user-confirmed feedback lessons (not independently verified):\n"
+            f"{feedback_context}"
+        )
+
+    yield from stream_research(
+        question,
+        additional_context=additional_context,
+        client=client,
+    )
     memory.add(
         messages=[{"role": "user", "content": question}],
         user_id=USER_ID,

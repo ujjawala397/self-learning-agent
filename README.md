@@ -32,13 +32,23 @@ python ingest.py
 
 The script reports discovered files and each initialization stage before embedding. It reads PDFs locally, sends extracted text to OpenAI to create embeddings, and stores vectors in the local `data/financial_qdrant/` directory. Keep the terminal open while it processes; API embedding calls can take time.
 
+### Research with cited evidence
+
+Use `research.py` for a non-streaming research answer with structured source metadata:
+
+```bash
+python research.py "What was Reliance's consolidated revenue?" --year FY2024-25
+```
+
+The Python API is `research(question, financial_year=None, top_k=8)` and returns an `answer` plus `sources` containing citation ID, report filename, financial year, PDF page, and retrieved passage text. It requires the report collection to have been built with `ingest.py`. The chat UI uses the same evidence-grounded research workflow in streaming mode and displays the retrieved report filenames and pages beneath each answer.
+
 To start the chat UI locally, run this from the project directory:
 
 ```bash
 python web_app.py
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The UI streams answer tokens as they arrive, and lets you rate an answer or submit an explanation and confirmed correction. Chat questions also search the indexed Reliance annual reports in `data/financial_qdrant/`; relevant report evidence is added to the prompt and answers are asked to cite the PDF filename and page.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The UI streams answer tokens as they arrive, displays the report sources and PDF pages used, and lets you rate an answer or submit an explanation and confirmed correction. Answers are grounded in retrieved Reliance report passages; user memories and confirmed feedback may personalize responses but are not treated as financial evidence.
 
 ### Running on a server
 

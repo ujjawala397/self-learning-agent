@@ -95,11 +95,28 @@ function attachFeedback(row, question, answer) {
   });
 }
 
+function attachSources(row, sources) {
+  if (!sources.length) return;
+  const section = document.createElement("section");
+  section.className = "source-list";
+  const heading = document.createElement("h3");
+  heading.textContent = "Report sources";
+  const list = document.createElement("ul");
+  for (const source of sources) {
+    const item = document.createElement("li");
+    item.textContent = `[${source.id}] ${source.source_file} · ${source.financial_year} · PDF page ${source.page_number ?? "unknown"}`;
+    list.append(item);
+  }
+  section.append(heading, list);
+  row.append(section);
+}
+
 function handleEvent(rawEvent, assistant, state) {
   const dataLine = rawEvent.split("\n").find((line) => line.startsWith("data: "));
   if (!dataLine) return;
   const data = JSON.parse(dataLine.slice(6));
-  if (data.token) {
+  if (data.type === "sources") state.sources = data.sources || [];
+  if (data.type === "token" && data.token) {
     state.answer += data.token;
     assistant.textContent += data.token;
     assistant.parentElement.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -115,7 +132,7 @@ form.addEventListener("submit", async (event) => {
   welcome.hidden = true;
   addMessage("user", question);
   const { row, content } = addMessage("assistant");
-  const state = { answer: "" };
+  const state = { answer: "", sources: [] };
   input.value = "";
   input.style.height = "auto";
   sendButton.disabled = true;
@@ -145,6 +162,7 @@ form.addEventListener("submit", async (event) => {
     }
     if (buffer.trim()) handleEvent(buffer, content, state);
     if (!state.answer) state.answer = content.textContent;
+    attachSources(row, state.sources);
     attachFeedback(row, question, state.answer);
   } catch (error) {
     const notice = document.createElement("div");

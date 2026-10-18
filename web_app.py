@@ -40,9 +40,10 @@ def create_app(client: Any = None, memory: Any = None) -> Flask:
         def events():
             try:
                 client, memory = get_services()
-                for token in agent.stream_response(client, memory, question):
-                    yield f"data: {json.dumps({'token': token}, ensure_ascii=False)}\n\n"
-                yield 'data: {"done":true}\n\n'
+                for event in agent.stream_research_response(
+                    client, memory, question
+                ):
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
             except Exception:
                 web_app.logger.exception("Streaming response failed")
                 yield (

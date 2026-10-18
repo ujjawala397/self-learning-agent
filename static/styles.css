@@ -127,6 +127,9 @@ button { color: inherit; }
 .message.user .message-content { max-width: min(580px, 85%); padding: 12px 15px; border-radius: 15px 15px 4px 15px; background: var(--green-soft); color: #283c2f; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.65; }
 .message.assistant .message-content { padding-top: 3px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.75; }
 .message.assistant .message-content:empty::after { content: " "; display: inline-block; width: 6px; height: 6px; margin-left: 3px; border-radius: 50%; background: #81a18b; animation: pulse .8s infinite alternate; }
+.source-list { margin: 13px 0 0 42px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.72); }
+.source-list h3 { margin: 0 0 6px; color: #59675b; font-size: 11px; font-weight: 700; }
+.source-list ul { display: grid; gap: 5px; margin: 0; padding-left: 16px; color: #788078; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .feedback-controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .feedback-button { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; color: #606960; font-size: 11px; cursor: pointer; }
 .feedback-button:hover { border-color: #b8c8b8; color: var(--green-dark); }

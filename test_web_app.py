@@ -46,6 +46,17 @@ class WebAppTests(unittest.TestCase):
         with (
             patch("agent.get_memory_context", return_value=""),
             patch("agent.get_feedback_context", return_value=""),
+            patch(
+                "research.retrieve_passages",
+                return_value=[
+                    {
+                        "source_file": "RIL-FY2024-25.pdf",
+                        "financial_year": "FY2024-25",
+                        "page_number": 56,
+                        "text": "Report evidence.",
+                    }
+                ],
+            ),
         ):
             response = self.http.post(
                 "/api/chat",
@@ -62,9 +73,25 @@ class WebAppTests(unittest.TestCase):
         ]
         self.assertEqual(
             events,
-            [{"token": "Hello"}, {"token": " there."}, {"done": True}],
+            [
+                {
+                    "type": "sources",
+                    "sources": [
+                        {
+                            "id": "S1",
+                            "source_file": "RIL-FY2024-25.pdf",
+                            "financial_year": "FY2024-25",
+                            "page_number": 56,
+                        }
+                    ],
+                },
+                {"type": "token", "token": "Hello"},
+                {"type": "token", "token": " there."},
+                {"type": "done"},
+            ],
         )
         self.assertTrue(self.client.calls[0]["stream"])
+        self.assertIn("[S1]", self.client.calls[0]["messages"][1]["content"])
         self.assertEqual(
             self.memory.added,
             [
