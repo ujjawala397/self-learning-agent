@@ -22,6 +22,16 @@ Add your OpenAI API key to `.env`, then start the terminal agent:
 python agent.py
 ```
 
+### Ingest Reliance annual reports
+
+Place Reliance annual report PDFs in `data/reports/reliance/`, with the financial year in each filename (for example, `RIL_FY2024-25.pdf`). From the project root, run:
+
+```bash
+python ingest.py
+```
+
+The script reports discovered files and each initialization stage before embedding. It reads PDFs locally, sends extracted text to OpenAI to create embeddings, and stores vectors in the local `data/financial_qdrant/` directory. Keep the terminal open while it processes; API embedding calls can take time.
+
 To start the chat UI locally, run this from the project directory:
 
 ```bash

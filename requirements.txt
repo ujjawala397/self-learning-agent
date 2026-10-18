@@ -3,3 +3,5 @@ openai
 python-dotenv
 Flask
 gunicorn
+pymupdf
+qdrant-client
