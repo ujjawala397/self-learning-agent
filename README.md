@@ -32,6 +32,16 @@ python ingest.py
 
 The script reports discovered files and each initialization stage before embedding. It reads PDFs locally, sends extracted text to OpenAI to create embeddings, and stores vectors in the local `data/financial_qdrant/` directory. Keep the terminal open while it processes; API embedding calls can take time.
 
+### Extract reported financial tables for review
+
+Run the table extractor from the project root:
+
+```bash
+python extract_financials.py
+```
+
+It writes one raw JSON file per PDF to `financial_data/`. Each extracted table includes its source PDF, financial year, PDF page, table index, and cleaned rows. The extractor does not classify tables as financial statements, verify figures, or calculate metrics; review the extracted tables before using any values. It reads from `data/reports/reliance/`; when that folder has no PDFs, it explicitly reports and falls back to the PDFs in `static/reliance/`.
+
 ### Research with cited evidence
 
 Use `research.py` for a non-streaming research answer with structured source metadata:
