@@ -222,6 +222,13 @@ class MemoryPolicyTests(unittest.TestCase):
 
         with patch("agent.get_memory_context", return_value=""), patch(
             "agent.get_feedback_context", return_value="- Use the annualized formula."
+        ), patch(
+            "agent.get_report_context",
+            return_value=(
+                "[R1] RIL-Integrated-Annual-Report-2024-25.pdf "
+                "(FY2024-25, PDF page 37)\n"
+                "The report states the annual revenue."
+            ),
         ):
             result = agent.respond(client, memory, question)
 
@@ -247,6 +254,32 @@ class MemoryPolicyTests(unittest.TestCase):
         ]
         self.assertIn("Use the annualized formula", system_prompt)
         self.assertIn("positive rating alone is not a verified fact", system_prompt)
+        self.assertIn("RIL-Integrated-Annual-Report-2024-25.pdf", system_prompt)
+        self.assertIn("PDF page 37", system_prompt)
+        self.assertIn("cite supporting claims using their [R#] references", system_prompt)
+
+    def test_report_context_searches_and_labels_retrieved_passages(self) -> None:
+        passages = [
+            {
+                "text": "Operating revenue was reported for the financial year.",
+                "source_file": "ril-report.pdf",
+                "financial_year": "FY2024-25",
+                "page_number": 71,
+            },
+            {
+                "text": "The annual report presents consolidated figures.",
+                "source_file": "ril-report.pdf",
+                "financial_year": "FY2024-25",
+                "page_number": 72,
+            },
+        ]
+        with patch("agent.retrieve_passages", return_value=passages) as search:
+            context = agent.get_report_context("What was operating revenue?")
+
+        search.assert_called_once_with("What was operating revenue?", top_k=5)
+        self.assertIn("[R1] ril-report.pdf (FY2024-25, PDF page 71)", context)
+        self.assertIn("[R2] ril-report.pdf (FY2024-25, PDF page 72)", context)
+        self.assertIn("Operating revenue", context)
 
 
 if __name__ == "__main__":

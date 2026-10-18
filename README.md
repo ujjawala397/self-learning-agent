@@ -38,7 +38,7 @@ To start the chat UI locally, run this from the project directory:
 python web_app.py
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The UI streams answer tokens as they arrive, and lets you rate an answer or submit an explanation and confirmed correction.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The UI streams answer tokens as they arrive, and lets you rate an answer or submit an explanation and confirmed correction. Chat questions also search the indexed Reliance annual reports in `data/financial_qdrant/`; relevant report evidence is added to the prompt and answers are asked to cite the PDF filename and page.
 
 ### Running on a server
 
